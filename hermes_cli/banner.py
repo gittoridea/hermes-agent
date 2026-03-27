@@ -130,7 +130,7 @@ def get_available_skills() -> Dict[str, List[str]]:
 _UPDATE_CHECK_CACHE_SECONDS = 6 * 3600
 
 
-def check_for_updates() -> Optional[int]:
+def check_for_updates(force_refresh: bool = False) -> Optional[int]:
     """Check how many commits behind origin/main the local repo is.
 
     Does a ``git fetch`` at most once every 6 hours (cached to
@@ -149,13 +149,14 @@ def check_for_updates() -> Optional[int]:
 
     # Read cache
     now = time.time()
-    try:
-        if cache_file.exists():
-            cached = json.loads(cache_file.read_text())
-            if now - cached.get("ts", 0) < _UPDATE_CHECK_CACHE_SECONDS:
-                return cached.get("behind")
-    except Exception:
-        pass
+    if not force_refresh:
+        try:
+            if cache_file.exists():
+                cached = json.loads(cache_file.read_text())
+                if now - cached.get("ts", 0) < _UPDATE_CHECK_CACHE_SECONDS:
+                    return cached.get("behind")
+        except Exception:
+            pass
 
     # Fetch latest refs (fast — only downloads ref metadata, no files)
     try:

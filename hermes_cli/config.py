@@ -149,6 +149,7 @@ DEFAULT_CONFIG = {
         # are passed through automatically; this list is for non-skill use cases.
         "env_passthrough": [],
         "docker_image": "nikolaik/python-nodejs:python3.11-nodejs20",
+        "docker_user": "",
         "docker_forward_env": [],
         "singularity_image": "docker://nikolaik/python-nodejs:python3.11-nodejs20",
         "modal_image": "nikolaik/python-nodejs:python3.11-nodejs20",
@@ -1867,6 +1868,7 @@ def set_config_value(key: str, value: str):
     _config_to_env_sync = {
         "terminal.backend": "TERMINAL_ENV",
         "terminal.docker_image": "TERMINAL_DOCKER_IMAGE",
+        "terminal.docker_user": "TERMINAL_DOCKER_USER",
         "terminal.singularity_image": "TERMINAL_SINGULARITY_IMAGE",
         "terminal.modal_image": "TERMINAL_MODAL_IMAGE",
         "terminal.daytona_image": "TERMINAL_DAYTONA_IMAGE",

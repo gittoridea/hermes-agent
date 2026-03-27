@@ -111,6 +111,7 @@ if _config_path.exists():
                 "timeout": "TERMINAL_TIMEOUT",
                 "lifetime_seconds": "TERMINAL_LIFETIME_SECONDS",
                 "docker_image": "TERMINAL_DOCKER_IMAGE",
+                "docker_user": "TERMINAL_DOCKER_USER",
                 "docker_forward_env": "TERMINAL_DOCKER_FORWARD_ENV",
                 "singularity_image": "TERMINAL_SINGULARITY_IMAGE",
                 "modal_image": "TERMINAL_MODAL_IMAGE",
@@ -432,7 +433,7 @@ class GatewayRunner:
             from honcho_integration.session import HonchoSessionManager
 
             hcfg = HonchoClientConfig.from_global_config()
-            if not hcfg.enabled or not hcfg.api_key:
+            if not hcfg.enabled or not (hcfg.api_key or hcfg.base_url):
                 return None, hcfg
 
             client = get_honcho_client(hcfg)
@@ -1736,6 +1737,18 @@ class GatewayRunner:
         
         if canonical == "personality":
             return await self._handle_personality_command(event)
+
+        if canonical == "hermes-os-export":
+            return await self._handle_hermes_os_export_command(event)
+
+        if canonical == "hermes-os-apply":
+            return await self._handle_hermes_os_apply_command(event)
+
+        if canonical == "hermes-os-refresh-patch":
+            return await self._handle_hermes_os_refresh_patch_command(event)
+
+        if canonical == "hermes-os-status":
+            return await self._handle_hermes_os_status_command(event)
 
         if canonical == "plan":
             try:
@@ -3093,6 +3106,26 @@ class GatewayRunner:
 
         available = "`none`, " + ", ".join(f"`{n}`" for n in personalities.keys())
         return f"Unknown personality: `{args}`\n\nAvailable: {available}"
+
+    async def _handle_hermes_os_export_command(self, event: MessageEvent) -> str:
+        from hermes_cli.hermes_os_commands import run_export_command
+
+        return run_export_command(event.get_command_args().strip())
+
+    async def _handle_hermes_os_apply_command(self, event: MessageEvent) -> str:
+        from hermes_cli.hermes_os_commands import run_apply_command
+
+        return run_apply_command(event.get_command_args().strip())
+
+    async def _handle_hermes_os_refresh_patch_command(self, event: MessageEvent) -> str:
+        from hermes_cli.hermes_os_commands import run_refresh_patch_command
+
+        return run_refresh_patch_command()
+
+    async def _handle_hermes_os_status_command(self, event: MessageEvent) -> str:
+        from hermes_cli.hermes_os_commands import run_status_command
+
+        return run_status_command()
     
     async def _handle_retry_command(self, event: MessageEvent) -> str:
         """Handle /retry command - re-send the last user message."""

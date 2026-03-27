@@ -154,6 +154,7 @@ def load_cli_config() -> Dict[str, Any]:
             "timeout": 60,
             "lifetime_seconds": 300,
             "docker_image": "nikolaik/python-nodejs:python3.11-nodejs20",
+            "docker_user": "",
             "docker_forward_env": [],
             "singularity_image": "docker://nikolaik/python-nodejs:python3.11-nodejs20",
             "modal_image": "nikolaik/python-nodejs:python3.11-nodejs20",
@@ -336,6 +337,7 @@ def load_cli_config() -> Dict[str, Any]:
         "timeout": "TERMINAL_TIMEOUT",
         "lifetime_seconds": "TERMINAL_LIFETIME_SECONDS",
         "docker_image": "TERMINAL_DOCKER_IMAGE",
+        "docker_user": "TERMINAL_DOCKER_USER",
         "docker_forward_env": "TERMINAL_DOCKER_FORWARD_ENV",
         "singularity_image": "TERMINAL_SINGULARITY_IMAGE",
         "modal_image": "TERMINAL_MODAL_IMAGE",
@@ -1478,7 +1480,7 @@ class HermesCLI:
 
         # 2. Replace untouched default with a Codex model
         if self._model_is_default:
-            fallback_model = "gpt-5.3-codex"
+            fallback_model = "gpt-5.4"
             try:
                 from hermes_cli.codex_models import get_codex_model_ids
 
@@ -3753,6 +3755,14 @@ class HermesCLI:
         elif canonical == "personality":
             # Use original case (handler lowercases the personality name itself)
             self._handle_personality_command(cmd_original)
+        elif canonical == "hermes-os-export":
+            self._handle_hermes_os_export_command(cmd_original)
+        elif canonical == "hermes-os-apply":
+            self._handle_hermes_os_apply_command(cmd_original)
+        elif canonical == "hermes-os-refresh-patch":
+            self._handle_hermes_os_refresh_patch_command()
+        elif canonical == "hermes-os-status":
+            self._handle_hermes_os_status_command()
         elif canonical == "plan":
             self._handle_plan_command(cmd_original)
         elif canonical == "retry":
@@ -3965,7 +3975,31 @@ class HermesCLI:
             self._pending_input.put(msg)
         else:
             self.console.print("[bold red]Plan mode unavailable: input queue not initialized[/]")
-    
+
+    def _handle_hermes_os_export_command(self, cmd: str):
+        from hermes_cli.hermes_os_commands import run_export_command
+
+        parts = cmd.split(maxsplit=1)
+        args = parts[1] if len(parts) > 1 else ""
+        self.console.print(run_export_command(args))
+
+    def _handle_hermes_os_apply_command(self, cmd: str):
+        from hermes_cli.hermes_os_commands import restart_gateway_service, run_apply_command
+
+        parts = cmd.split(maxsplit=1)
+        args = parts[1] if len(parts) > 1 else ""
+        self.console.print(run_apply_command(args, restart_callback=restart_gateway_service))
+
+    def _handle_hermes_os_refresh_patch_command(self):
+        from hermes_cli.hermes_os_commands import run_refresh_patch_command
+
+        self.console.print(run_refresh_patch_command())
+
+    def _handle_hermes_os_status_command(self):
+        from hermes_cli.hermes_os_commands import run_status_command
+
+        self.console.print(run_status_command())
+
     def _handle_background_command(self, cmd: str):
         """Handle /background <prompt> — run a prompt in a separate background session.
 
@@ -6039,7 +6073,7 @@ class HermesCLI:
             from honcho_integration.client import HonchoClientConfig
             from agent.display import honcho_session_line, write_tty
             hcfg = HonchoClientConfig.from_global_config()
-            if hcfg.enabled and hcfg.api_key and hcfg.explicitly_configured:
+            if hcfg.enabled and (hcfg.api_key or hcfg.base_url) and hcfg.explicitly_configured:
                 sname = hcfg.resolve_session_name(session_id=self.session_id)
                 if sname:
                     write_tty(honcho_session_line(hcfg.workspace_id, sname) + "\n")

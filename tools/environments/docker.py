@@ -213,15 +213,23 @@ class DockerEnvironment(BaseEnvironment):
         network: bool = True,
         host_cwd: str = None,
         auto_mount_cwd: bool = False,
+        user: str | None = None,
     ):
+        requested_user = (user or "").strip()
+        using_non_root_user = bool(requested_user) and requested_user not in ("root", "0", "0:0")
+        default_home = "/home/hermes" if using_non_root_user else "/root"
+
         if cwd == "~":
-            cwd = "/root"
+            cwd = default_home
+        elif using_non_root_user and cwd.startswith("/root"):
+            cwd = cwd.replace("/root", default_home, 1)
         super().__init__(cwd=cwd, timeout=timeout)
         self._base_image = image
         self._persistent = persistent_filesystem
         self._task_id = task_id
         self._forward_env = _normalize_forward_env_names(forward_env)
         self._container_id: Optional[str] = None
+        self._user = requested_user
         logger.info(f"DockerEnvironment volumes: {volumes}")
         # Ensure volumes is a list (config.yaml could be malformed)
         if volumes is not None and not isinstance(volumes, list):
@@ -288,7 +296,7 @@ class DockerEnvironment(BaseEnvironment):
             self._home_dir = str(sandbox / "home")
             os.makedirs(self._home_dir, exist_ok=True)
             writable_args.extend([
-                "-v", f"{self._home_dir}:/root",
+                "-v", f"{self._home_dir}:{default_home}",
             ])
             if not bind_host_cwd and not workspace_explicitly_mounted:
                 self._workspace_dir = str(sandbox / "workspace")
@@ -314,6 +322,13 @@ class DockerEnvironment(BaseEnvironment):
 
         logger.info(f"Docker volume_args: {volume_args}")
         all_run_args = list(_SECURITY_ARGS) + writable_args + resource_args + volume_args
+        if using_non_root_user:
+            all_run_args.extend([
+                "--user", requested_user,
+                "-e", f"HOME={default_home}",
+                "-e", "USER=hermes",
+                "-e", "LOGNAME=hermes",
+            ])
         logger.info(f"Docker run_args: {all_run_args}")
 
         # Resolve the docker executable once so it works even when

@@ -57,6 +57,29 @@ def test_check_for_updates_expired_cache(tmp_path):
     assert mock_run.call_count == 2  # git fetch + git rev-list
 
 
+def test_check_for_updates_force_refresh_ignores_fresh_cache(tmp_path):
+    """Force refresh should bypass a fresh cache and recompute from git."""
+    from hermes_cli.banner import check_for_updates
+
+    repo_dir = tmp_path / "hermes-agent"
+    repo_dir.mkdir()
+    (repo_dir / ".git").mkdir()
+
+    cache_file = tmp_path / ".update_check"
+    cache_file.write_text(json.dumps({"ts": time.time(), "behind": 121}))
+
+    mock_result = MagicMock(returncode=0, stdout="0\n")
+
+    with patch("hermes_cli.banner.os.getenv", return_value=str(tmp_path)):
+        with patch("hermes_cli.banner.subprocess.run", return_value=mock_result) as mock_run:
+            result = check_for_updates(force_refresh=True)
+
+    assert result == 0
+    assert mock_run.call_count == 2  # git fetch + git rev-list
+    rewritten = json.loads(cache_file.read_text())
+    assert rewritten["behind"] == 0
+
+
 def test_check_for_updates_no_git_dir(tmp_path):
     """Returns None when .git directory doesn't exist anywhere."""
     import hermes_cli.banner as banner

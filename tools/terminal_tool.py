@@ -494,6 +494,7 @@ def _get_env_config() -> Dict[str, Any]:
     return {
         "env_type": env_type,
         "docker_image": os.getenv("TERMINAL_DOCKER_IMAGE", default_image),
+        "docker_user": os.getenv("TERMINAL_DOCKER_USER", ""),
         "docker_forward_env": _parse_env_var("TERMINAL_DOCKER_FORWARD_ENV", "[]", json.loads, "valid JSON"),
         "singularity_image": os.getenv("TERMINAL_SINGULARITY_IMAGE", f"docker://{default_image}"),
         "modal_image": os.getenv("TERMINAL_MODAL_IMAGE", default_image),
@@ -553,6 +554,7 @@ def _create_environment(env_type: str, image: str, cwd: str, timeout: int,
     persistent = cc.get("container_persistent", True)
     volumes = cc.get("docker_volumes", [])
     docker_forward_env = cc.get("docker_forward_env", [])
+    docker_user = cc.get("docker_user", "")
 
     if env_type == "local":
         lc = local_config or {}
@@ -568,6 +570,7 @@ def _create_environment(env_type: str, image: str, cwd: str, timeout: int,
             host_cwd=host_cwd,
             auto_mount_cwd=cc.get("docker_mount_cwd_to_workspace", False),
             forward_env=docker_forward_env,
+            user=docker_user,
         )
     
     elif env_type == "singularity":
@@ -957,6 +960,7 @@ def terminal_tool(
                                 "container_disk": config.get("container_disk", 51200),
                                 "container_persistent": config.get("container_persistent", True),
                                 "docker_volumes": config.get("docker_volumes", []),
+                                "docker_user": config.get("docker_user", ""),
                                 "docker_mount_cwd_to_workspace": config.get("docker_mount_cwd_to_workspace", False),
                             }
 

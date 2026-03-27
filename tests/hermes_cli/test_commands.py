@@ -84,10 +84,14 @@ class TestResolveCommand:
         assert resolve_command("gateway").name == "platforms"
         assert resolve_command("set-home").name == "sethome"
         assert resolve_command("reload_mcp").name == "reload-mcp"
+        assert resolve_command("os-status").name == "hermes-os-status"
+        assert resolve_command("sync-export").name == "hermes-os-export"
+        assert resolve_command("patch-refresh").name == "hermes-os-refresh-patch"
 
     def test_leading_slash_stripped(self):
         assert resolve_command("/help").name == "help"
         assert resolve_command("/bg").name == "background"
+        assert resolve_command("/hermes-os-apply").name == "hermes-os-apply"
 
     def test_unknown_returns_none(self):
         assert resolve_command("nonexistent") is None

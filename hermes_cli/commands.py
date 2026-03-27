@@ -85,6 +85,14 @@ COMMAND_REGISTRY: list[CommandDef] = [
                cli_only=True, args_hint="[text]", subcommands=("clear",)),
     CommandDef("personality", "Set a predefined personality", "Configuration",
                args_hint="[name]"),
+    CommandDef("hermes-os-export", "Export live Hermes OS state into hermes-os", "Configuration",
+               args_hint="[--force]", aliases=("os-export", "sync-export")),
+    CommandDef("hermes-os-apply", "Preview or apply hermes-os repo state to live Hermes", "Configuration",
+               args_hint="[--preview|--confirm|--restart-gateway]", aliases=("os-apply", "sync-apply")),
+    CommandDef("hermes-os-refresh-patch", "Refresh the local Hermes runtime patch receipt", "Configuration",
+               aliases=("os-refresh", "patch-refresh")),
+    CommandDef("hermes-os-status", "Show Hermes OS health status", "Info",
+               aliases=("os-status", "sync-status")),
     CommandDef("statusbar", "Toggle the context/model status bar", "Configuration",
                cli_only=True, aliases=("sb",)),
     CommandDef("verbose", "Cycle tool progress display: off -> new -> all -> verbose",
@@ -699,7 +707,7 @@ class SlashCommandAutoSuggest(AutoSuggest):
         if len(parts) == 1 and not text.endswith(" "):
             # Still typing the command name: /upd → suggest "ate"
             word = text[1:].lower()
-            for cmd in COMMANDS:
+            for cmd in sorted(COMMANDS, key=lambda item: (len(item), item)):
                 cmd_name = cmd[1:]  # strip leading /
                 if cmd_name.startswith(word) and cmd_name != word:
                     return Suggestion(cmd_name[len(word):])

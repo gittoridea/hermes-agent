@@ -44,6 +44,7 @@ def _make_dummy_env(**kwargs):
         network=kwargs.get("network", True),
         host_cwd=kwargs.get("host_cwd"),
         auto_mount_cwd=kwargs.get("auto_mount_cwd", False),
+        user=kwargs.get("user"),
     )
 
 
@@ -151,6 +152,28 @@ def test_auto_mount_disabled_by_default(monkeypatch, tmp_path):
     assert run_calls, "docker run should have been called"
     run_args_str = " ".join(run_calls[0][0])
     assert f"{project_dir}:/workspace" not in run_args_str
+
+
+def test_non_root_user_mapping_adds_user_and_home(monkeypatch):
+    """Configured docker user should flow into docker run with a writable home."""
+    monkeypatch.setattr(docker_env, "find_docker", lambda: "/usr/bin/docker")
+    calls = _mock_subprocess_run(monkeypatch)
+
+    _make_dummy_env(
+        cwd="/workspace",
+        persistent_filesystem=True,
+        user="1000:1000",
+    )
+
+    run_calls = [c for c in calls if isinstance(c[0], list) and len(c[0]) >= 2 and c[0][1] == "run"]
+    assert run_calls, "docker run should have been called"
+    run_args = run_calls[0][0]
+    run_args_str = " ".join(run_args)
+    assert "--user" in run_args
+    assert "1000:1000" in run_args
+    assert "HOME=/home/hermes" in run_args_str
+    assert "USER=hermes" in run_args_str
+    assert ":/home/hermes" in run_args_str
 
 
 def test_auto_mount_skipped_when_workspace_already_mounted(monkeypatch, tmp_path):

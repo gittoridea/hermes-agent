@@ -980,10 +980,10 @@ class AIAgent:
                     else:
                         if not hcfg.enabled:
                             logger.debug("Honcho disabled in global config")
-                        elif not hcfg.api_key:
-                            logger.debug("Honcho enabled but no API key configured")
+                        elif not (hcfg.api_key or hcfg.base_url):
+                            logger.debug("Honcho enabled but no API key or base URL configured")
                         else:
-                            logger.debug("Honcho enabled but missing API key or disabled in config")
+                            logger.debug("Honcho enabled but activation checks prevented startup")
             except Exception as e:
                 logger.warning("Honcho init failed — memory disabled: %s", e)
                 print(f"  Honcho init failed: {e}")
@@ -2182,9 +2182,9 @@ class AIAgent:
 
     def _honcho_should_activate(self, hcfg) -> bool:
         """Return True when remote Honcho should be active."""
-        if not hcfg or not hcfg.enabled or not hcfg.api_key:
+        if not hcfg or not hcfg.enabled:
             return False
-        return True
+        return bool(hcfg.api_key or hcfg.base_url)
 
     def _strip_honcho_tools_from_surface(self) -> None:
         """Remove Honcho tools from the active tool surface."""

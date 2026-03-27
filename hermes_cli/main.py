@@ -2335,6 +2335,13 @@ def cmd_version(args):
     """Show version."""
     print(f"Hermes Agent v{__version__} ({__release_date__})")
     print(f"Project: {PROJECT_ROOT}")
+
+    git_context = _get_git_version_context()
+    if git_context:
+        git_line = f"Git: {git_context['branch']} @ {git_context['short_sha']}"
+        if git_context.get("tracking"):
+            git_line += f" [{git_context['tracking']}]"
+        print(git_line)
     
     # Show Python version
     print(f"Python: {sys.version.split()[0]}")
@@ -2349,7 +2356,7 @@ def cmd_version(args):
     # Show update status (synchronous — acceptable since user asked for version info)
     try:
         from hermes_cli.banner import check_for_updates
-        behind = check_for_updates()
+        behind = check_for_updates(force_refresh=True)
         if behind and behind > 0:
             commits_word = "commit" if behind == 1 else "commits"
             print(f"Update available: {behind} {commits_word} behind — run 'hermes update'")
@@ -2651,6 +2658,61 @@ def _invalidate_update_cache():
     except Exception:
         pass
 
+
+def _get_git_version_context() -> Optional[dict[str, str]]:
+    """Return git context for the current checkout when available."""
+    git_dir = PROJECT_ROOT / ".git"
+    if not git_dir.exists():
+        return None
+
+    try:
+        branch = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        short_sha = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    except subprocess.CalledProcessError:
+        return None
+
+    tracking = ""
+    try:
+        upstream = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        counts = subprocess.run(
+            ["git", "rev-list", "--left-right", "--count", f"HEAD...{upstream}"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        ahead, behind = counts.split()
+        if ahead == "0" and behind == "0":
+            tracking = f"synced with {upstream}"
+        else:
+            tracking = f"{ahead} ahead, {behind} behind vs {upstream}"
+    except (subprocess.CalledProcessError, ValueError):
+        tracking = ""
+
+    return {
+        "branch": branch,
+        "short_sha": short_sha,
+        "tracking": tracking,
+    }
+
 def cmd_update(args):
     """Update Hermes Agent to the latest version."""
     import shutil
@@ -2732,9 +2794,13 @@ def cmd_update(args):
         prompt_for_restore = auto_stash_ref is not None and sys.stdin.isatty() and sys.stdout.isatty()
 
         print("→ Pulling updates...")
+        pull_succeeded = False
         try:
             subprocess.run(git_cmd + ["pull", "--ff-only", "origin", branch], cwd=PROJECT_ROOT, check=True)
+            pull_succeeded = True
         finally:
+            if pull_succeeded:
+                _invalidate_update_cache()
             if auto_stash_ref is not None:
                 _restore_stashed_changes(
                     git_cmd,

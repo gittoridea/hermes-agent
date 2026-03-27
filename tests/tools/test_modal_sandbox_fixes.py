@@ -132,6 +132,7 @@ class TestCwdHandling:
             with patch.dict(os.environ, {
                 "TERMINAL_ENV": "docker",
                 "TERMINAL_DOCKER_MOUNT_CWD_TO_WORKSPACE": "true",
+                "TERMINAL_DOCKER_USER": "1000:1000",
             }, clear=False):
                 env = os.environ.copy()
                 env.pop("TERMINAL_CWD", None)
@@ -139,6 +140,7 @@ class TestCwdHandling:
                     config = _tt_mod._get_env_config()
                     assert config["cwd"] == "/workspace"
                     assert config["host_cwd"] == "/home/user/project"
+                    assert config["docker_user"] == "1000:1000"
 
     def test_local_backend_uses_getcwd(self):
         """Local backend should use os.getcwd(), not /root."""
@@ -165,7 +167,7 @@ class TestCwdHandling:
             image="python:3.11",
             cwd="/workspace",
             timeout=60,
-            container_config={"docker_mount_cwd_to_workspace": True},
+            container_config={"docker_mount_cwd_to_workspace": True, "docker_user": "1000:1000"},
             host_cwd="/home/user/project",
         )
 
@@ -173,6 +175,7 @@ class TestCwdHandling:
         assert captured["cwd"] == "/workspace"
         assert captured["host_cwd"] == "/home/user/project"
         assert captured["auto_mount_cwd"] is True
+        assert captured["user"] == "1000:1000"
 
     def test_ssh_preserves_home_paths(self):
         """SSH backend should NOT replace /home/ paths (they're valid remotely)."""

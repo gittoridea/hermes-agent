@@ -112,6 +112,7 @@ def _get_file_ops(task_id: str = "default") -> ShellFileOperations:
                     "container_disk": config.get("container_disk", 51200),
                     "container_persistent": config.get("container_persistent", True),
                     "docker_volumes": config.get("docker_volumes", []),
+                    "docker_user": config.get("docker_user", ""),
                 }
 
             ssh_config = None
