@@ -3755,14 +3755,6 @@ class HermesCLI:
         elif canonical == "personality":
             # Use original case (handler lowercases the personality name itself)
             self._handle_personality_command(cmd_original)
-        elif canonical == "hermes-os-export":
-            self._handle_hermes_os_export_command(cmd_original)
-        elif canonical == "hermes-os-apply":
-            self._handle_hermes_os_apply_command(cmd_original)
-        elif canonical == "hermes-os-refresh-patch":
-            self._handle_hermes_os_refresh_patch_command()
-        elif canonical == "hermes-os-status":
-            self._handle_hermes_os_status_command()
         elif canonical == "plan":
             self._handle_plan_command(cmd_original)
         elif canonical == "retry":
@@ -3975,30 +3967,6 @@ class HermesCLI:
             self._pending_input.put(msg)
         else:
             self.console.print("[bold red]Plan mode unavailable: input queue not initialized[/]")
-
-    def _handle_hermes_os_export_command(self, cmd: str):
-        from hermes_cli.hermes_os_commands import run_export_command
-
-        parts = cmd.split(maxsplit=1)
-        args = parts[1] if len(parts) > 1 else ""
-        self.console.print(run_export_command(args))
-
-    def _handle_hermes_os_apply_command(self, cmd: str):
-        from hermes_cli.hermes_os_commands import restart_gateway_service, run_apply_command
-
-        parts = cmd.split(maxsplit=1)
-        args = parts[1] if len(parts) > 1 else ""
-        self.console.print(run_apply_command(args, restart_callback=restart_gateway_service))
-
-    def _handle_hermes_os_refresh_patch_command(self):
-        from hermes_cli.hermes_os_commands import run_refresh_patch_command
-
-        self.console.print(run_refresh_patch_command())
-
-    def _handle_hermes_os_status_command(self):
-        from hermes_cli.hermes_os_commands import run_status_command
-
-        self.console.print(run_status_command())
 
     def _handle_background_command(self, cmd: str):
         """Handle /background <prompt> — run a prompt in a separate background session.
